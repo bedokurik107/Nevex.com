@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #EDEFF5;
+  background: #05060A;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { width: 100%; min-height: 100%; margin: 0; }
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(47,184,255,.16), transparent 35%),
+    radial-gradient(circle at 100% 30%, rgba(124,92,252,.12), transparent 30%),
+    #05060A;
+}
+button, input { font: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid #2FB8FF; outline-offset: 2px; }
+
+/* Hide scrollbars while keeping touch/trackpad scrolling. */
+::-webkit-scrollbar { width: 0; height: 0; }
+* { scrollbar-width: none; }
+
+/* Desktop preview: keep the Mini App feel, but give it a cleaner presentation. */
+.nevex-app-shell {
+  width: min(430px, calc(100vw - 24px)) !important;
+  height: min(860px, calc(100vh - 24px)) !important;
+  min-height: 620px;
+  border-radius: 34px !important;
+  border-width: 6px !important;
+  box-shadow:
+    0 35px 90px rgba(0,0,0,.58),
+    0 0 0 1px rgba(255,255,255,.03),
+    0 0 60px rgba(47,184,255,.08) !important;
+}
+
+@media (max-width: 520px) {
+  .nevex-app-shell {
+    width: 100% !important;
+    height: 100dvh !important;
+    min-height: 100dvh;
+    border-radius: 0 !important;
+    border-width: 0 !important;
+  }
+}
+
+@media (min-width: 900px) {
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+    background-size: 36px 36px;
+    mask-image: linear-gradient(to bottom, black, transparent 75%);
+  }
+}
