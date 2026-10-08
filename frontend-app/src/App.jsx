@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { TonConnectUIProvider, TonConnectButton, useTonAddress, useTonWallet, useTonConnectUI } from "@tonconnect/ui-react";
 import {
   Search,
   Gem,
@@ -34,13 +35,13 @@ const FONT_IMPORT = `
 const FEE_RATE = 0.01; // 1% platform fee, paid by the buyer
 
 const GIFT_TYPES = {
-  "Plush Pepe": { emoji: "🐸", models: ["Emerald", "Ruby", "Classic"] },
-  "Golden Egg": { emoji: "🥚", models: ["Classic", "Speckled"] },
-  "Toy Bear": { emoji: "🧸", models: ["Honey", "Cocoa"] },
-  "Diamond Ring": { emoji: "💍", models: ["Solitaire", "Halo"] },
-  "Jester Hat": { emoji: "🎭", models: ["Crimson", "Violet"] },
-  "Snow Globe": { emoji: "🔮", models: ["Winter", "Aurora"] },
-  "Star Notepad": { emoji: "📓", models: ["Gold Foil", "Silver Foil"] },
+  "Plush Pepe": { emoji: "", models: ["Emerald", "Ruby", "Classic"] },
+  "Golden Egg": { emoji: "", models: ["Classic", "Speckled"] },
+  "Toy Bear": { emoji: "", models: ["Honey", "Cocoa"] },
+  "Diamond Ring": { emoji: "", models: ["Solitaire", "Halo"] },
+  "Jester Hat": { emoji: "", models: ["Crimson", "Violet"] },
+  "Snow Globe": { emoji: "", models: ["Winter", "Aurora"] },
+  "Star Notepad": { emoji: "", models: ["Gold Foil", "Silver Foil"] },
 };
 
 const NFT_STATS = {
@@ -86,7 +87,7 @@ const SYMBOLS = [
   { name: "Звезда", icon: "⭐", rarity: 10.2 },
   { name: "Искра", icon: "✨", rarity: 14.6 },
   { name: "Пламя", icon: "🔥", rarity: 8.9 },
-  { name: "Корона", icon: "👑", rarity: 5.4 },
+  { name: "Корона", icon: "''", rarity: 5.4 },
   { name: "Волна", icon: "🌊", rarity: 17.3 },
   { name: "Череп", icon: "💀", rarity: 12.1 },
 ];
@@ -209,15 +210,30 @@ function CheckDot({ checked, onClick }) {
   );
 }
 function getGiftEmoji(type) {
-  return GIFT_TYPES?.[type]?.emoji || "🎁";
+  return GIFT_TYPES?.[type]?.emoji || "ЋЃ";
 }
 
 function MiniGift({ item, size = 40 }) {
   const bgHex = BACKGROUNDS.find((b) => b.name === item.bg)?.hex || "#27314A";
   const emoji = getGiftEmoji(item?.type);
+  const [imgFailed, setImgFailed] = useState(false);
+  const showImage = Boolean(item?.imageUrl) && !imgFailed;
+
   return (
-    <div className="rounded-lg flex items-center justify-center shrink-0" style={{ width: size, height: size, background: bgHex + "33", fontSize: size * 0.5 }}>
-      {emoji}
+    <div
+      className="rounded-lg flex items-center justify-center shrink-0 overflow-hidden"
+      style={{ width: size, height: size, background: bgHex + "33" }}
+    >
+      {showImage ? (
+        <img
+          src={item.imageUrl}
+          alt={item.type || "Telegram Gift"}
+          onError={() => setImgFailed(true)}
+          style={{ width: "86%", height: "86%", objectFit: "contain", display: "block" }}
+        />
+      ) : (
+        <span style={{ fontSize: size * 0.5 }}>{emoji}</span>
+      )}
     </div>
   );
 }
@@ -325,8 +341,8 @@ function GiftCard({ item, selected, onToggleSelect, onOpenDetail, cornerBadge, p
       className="rounded-2xl p-3 relative"
       style={{
         background: "#151A24",
-        border: promoted ? "1px solid #F0B429" : r.glow ? "1px solid rgba(240,180,41,0.35)" : "1px solid rgba(255,255,255,0.06)",
-        boxShadow: promoted ? "0 0 18px rgba(240,180,41,0.25)" : r.glow ? "0 0 24px rgba(240,180,41,0.12)" : "none",
+        border: "1px solid rgba(255,255,255,0.06)",
+        boxShadow: "none",
         cursor: onOpenDetail ? "pointer" : "default",
       }}
     >
@@ -345,9 +361,8 @@ function GiftCard({ item, selected, onToggleSelect, onOpenDetail, cornerBadge, p
         <span className="absolute bottom-1 right-1.5" style={{ fontSize: 15, opacity: 0.8 }}>{symbolIcon}</span>
       </div>
       <p style={{ color: "#EDEFF5", fontSize: 13.5, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif" }}>{item.type}</p>
-      <p style={{ color: "#8B93A7", fontSize: 11, marginTop: 1 }}>{item.model} · #{item.num}</p>
+      <p style={{ color: "#8B93A7", fontSize: 11, marginTop: 1 }}>{item.model} В· #{item.num}</p>
       <div className="flex items-center justify-between mt-2.5">
-        <span style={{ fontSize: 10, fontWeight: 600, color: r.color, border: `1px solid ${r.color}55`, borderRadius: 999, padding: "2px 7px" }}>{r.label}</span>
       </div>
       {footer && <div onClick={(e) => e.stopPropagation()}>{footer}</div>}
     </div>
@@ -447,33 +462,28 @@ export default function GiftMarketPrototype() {
     const rarityValues = [Number(g.model_rarity || 0), Number(g.pattern_rarity || 0), Number(g.backdrop_rarity || 0)].filter(Boolean);
     const minRarity = rarityValues.length ? Math.min(...rarityValues) : 99;
     const rarity = minRarity <= 5 ? "legendary" : minRarity <= 10 ? "rare" : "common";
-    return { id: Number(g.id ?? index + 1), type: g.title || "Telegram Gift", model: g.model || "—", rarity, bg: g.backdrop || "—", symbol: g.pattern || "—", price: Number.isFinite(price) ? price : 0, num: String(g.num ?? "0").padStart(4, "0"), slug: g.slug || "", imageUrl: g.image_url || "" };
+    return { id: Number(g.id ?? index + 1), giftId: g.gift_id ?? g.id ?? null, type: g.title || "Telegram Gift", model: g.model || "—", rarity, modelRarity: Number.isFinite(Number(g.model_rarity)) ? Number(g.model_rarity) / 10 : null, bg: g.backdrop || "—", backdropRarity: Number.isFinite(Number(g.backdrop_rarity)) ? Number(g.backdrop_rarity) / 10 : null, symbol: g.pattern || "—", patternRarity: Number.isFinite(Number(g.pattern_rarity)) ? Number(g.pattern_rarity) / 10 : null, price: Number.isFinite(price) ? price : 0, num: String(g.num ?? "0").padStart(4, "0"), slug: g.slug || "", imageUrl: g.image_url || "" };
   }
 
   async function loadMarket() {
-    setMarketLoading(true); setMarketError("");
+    setMarketLoading(true);
+    setMarketError("");
     try {
-      const statusResponse = await fetch("/api/mrkt/status");
-      const status = statusResponse.ok ? await statusResponse.json() : { configured: false };
-      if (status.configured) {
-        const syncResponse = await fetch("/api/mrkt/sync?count=20", { method: "POST" });
-        if (!syncResponse.ok) {
-          const syncData = await syncResponse.json().catch(() => ({}));
-          throw new Error(syncData.detail || `MRKT sync ${syncResponse.status}`);
-        }
-      }
       const response = await fetch("/api/gifts?limit=500");
       if (!response.ok) throw new Error(`API ${response.status}`);
       const data = await response.json();
-      const mapped = (data.items || []).map(normalizeApiGift).filter((g) => g.price > 0);
+      const mapped = (data.items || []).map(normalizeApiGift);
       setMarketListings(mapped);
-      setMarketSource(status.configured ? "MRKT → backend" : "MRKT не подключён");
-      if (!mapped.length) setMarketError(status.configured ? "MRKT не вернул активных объявлений." : "Добавь MRKT_TOKEN в backend/.env, затем обнови страницу.");
+      setMarketSource("MRKT");
+      if (!mapped.length) setMarketError("MRKT не вернул активных NFT.");
     } catch (e) {
-      setMarketListings([]); setMarketSource("Backend недоступен"); setMarketError(e?.message || "Не удалось загрузить каталог");
-    } finally { setMarketLoading(false); }
+      setMarketListings([]);
+      setMarketSource("Backend недоступен");
+      setMarketError(e?.message || "Не удалось загрузить каталог");
+    } finally {
+      setMarketLoading(false);
+    }
   }
-
   useEffect(() => { loadMarket(); }, []);
   const [loadDuration] = useState(() => detectLoadDuration());
   const [appLoading, setAppLoading] = useState(true);
@@ -735,6 +745,7 @@ export default function GiftMarketPrototype() {
   const displayUsername = tgUser?.username ? `@${tgUser.username}` : "@username";
 
   return (
+    <TonConnectUIProvider manifestUrl="https://bedokurik107.github.io/Nevex.com/tonconnect-manifest.json">
     <div className="w-full min-h-screen flex items-center justify-center py-10" style={{ background: "#05060A" }}>
       <style>{FONT_IMPORT}</style>
 
@@ -786,7 +797,7 @@ export default function GiftMarketPrototype() {
                       <MiniGift item={item} size={40} />
                       <div className="flex-1 min-w-0">
                         <p style={{ color: "#EDEFF5", fontSize: 13, fontWeight: 600 }}>{item.type}</p>
-                        <p style={{ color: "#8B93A7", fontSize: 10.5 }}>{item.model} · #{item.num}</p>
+                        <p style={{ color: "#8B93A7", fontSize: 10.5 }}>{item.model} В· #{item.num}</p>
                       </div>
                       <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: "#EDEFF5", fontSize: 12.5, fontWeight: 600 }}>{item.price} TON</span>
                       <button onClick={() => removeCartItem(id)} className="p-1.5 shrink-0"><Trash2 size={15} color="#8B93A7" /></button>
@@ -1014,6 +1025,18 @@ export default function GiftMarketPrototype() {
                   <span style={{ color: "#3ECF8E", fontSize: 10.5, fontWeight: 600 }}>{tgUser ? "Привязан к Telegram" : "Профиль привязан к Telegram-аккаунту"}</span>
                 </span>
               </div>
+              <div className="px-5 mb-5">
+                <div className="rounded-2xl p-4" style={{ background: "#151A24", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <p style={{ color: "#8B93A7", fontSize: 11.5, fontWeight: 600, letterSpacing: 0.5, marginBottom: 10 }}>КОШЕЛЁК</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p style={{ color: "#EDEFF5", fontSize: 13.5, fontWeight: 600 }}>TON Wallet</p>
+                      <p style={{ color: "#8B93A7", fontSize: 10.5, marginTop: 2 }}>Подключите кошелёк для работы с TON</p>
+                    </div>
+                    <TonConnectButton />
+                  </div>
+                </div>
+              </div>
               <div className="mx-5 rounded-2xl p-4 mb-5" style={{ background: "#151A24", border: "1px solid rgba(255,255,255,0.06)" }}>
                 <p style={{ color: "#8B93A7", fontSize: 11.5, fontWeight: 600, letterSpacing: 0.5, marginBottom: 4 }}>БАЛАНС</p>
                 <div className="flex items-center gap-1.5 mb-4">
@@ -1203,7 +1226,7 @@ export default function GiftMarketPrototype() {
               <span style={{ color: "#8B93A7", fontSize: 11, fontWeight: 600 }}>ПОДАРОК</span>
               <div className="flex items-center gap-4">
                 <SortHead label="Флор" field="floor" sort={nftSort} onClick={() => setNftSort(nextSort("floor", nftSort))} />
-                <SortHead label="Оборот" field="volume" sort={nftSort} onClick={() => setNftSort(nextSort("volume", nftSort))} />
+                <SortHead label="Оборот'" field="volume" sort={nftSort} onClick={() => setNftSort(nextSort("volume", nftSort))} />
               </div>
             </div>
             {nftTypesSorted.map((t) => {
@@ -1369,7 +1392,7 @@ export default function GiftMarketPrototype() {
               className="w-full px-3.5 py-3 rounded-xl outline-none mb-4"
               style={{ background: "#151A24", color: "#EDEFF5", fontSize: 13, border: "1px solid rgba(255,255,255,0.08)", fontFamily: "'IBM Plex Mono', monospace" }}
             />
-            <p style={{ color: "#8B93A7", fontSize: 11.5, fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>СУММА, TON</p>
+            <p style={{ color: "#8B93A7", fontSize: 11.5, fontWeight: 600, letterSpacing: 0.5, marginBottom: 8 }}>РЎРЈРњРњРђ, TON</p>
             <input
               type="text"
               inputMode="numeric"
@@ -1486,7 +1509,7 @@ export default function GiftMarketPrototype() {
                       <MiniGift item={qItem} size={56} />
                       <div>
                         <p style={{ color: "#EDEFF5", fontSize: 14, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif" }}>{qItem.type}</p>
-                        <p style={{ color: "#8B93A7", fontSize: 11.5 }}>{qItem.model} · #{qItem.num}</p>
+                        <p style={{ color: "#8B93A7", fontSize: 11.5 }}>{qItem.model} В· #{qItem.num}</p>
                       </div>
                     </div>
                     <div className="rounded-2xl p-4 mb-4" style={{ background: "#151A24", border: "1px solid rgba(255,255,255,0.06)" }}>
@@ -1585,7 +1608,7 @@ export default function GiftMarketPrototype() {
               <div className="flex items-center justify-between py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <div>
                   <p style={{ color: "#8B93A7", fontSize: 12, fontWeight: 600 }}>Коллекция</p>
-                  <p style={{ color: "#8B93A7", fontSize: 10.5, marginTop: 1 }}>Флор {NFT_STATS[detailItem.type].floor} TON</p>
+                  <p style={{ color: "#8B93A7", fontSize: 10.5, marginTop: 1 }}>Флор {(NFT_STATS[detailItem.type]?.floor ?? detailItem.price ?? 0)} TON</p>
                 </div>
                 <p style={{ color: "#EDEFF5", fontSize: 13.5, fontWeight: 600, fontFamily: "'Space Grotesk', sans-serif" }}>{detailItem.type}</p>
               </div>
@@ -1593,15 +1616,15 @@ export default function GiftMarketPrototype() {
               <div className="flex items-center justify-between py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <div>
                   <p style={{ color: "#8B93A7", fontSize: 12, fontWeight: 600 }}>Модель</p>
-                  <p style={{ color: "#8B93A7", fontSize: 10.5, marginTop: 1 }}>Флор {MODEL_META[detailItem.model].price} TON</p>
+                  <p style={{ color: "#8B93A7", fontSize: 10.5, marginTop: 1 }}>Цена NFT {detailItem.price ?? "—"} TON</p>
                 </div>
-                <span style={{ color: "#7C5CFC", fontSize: 12, fontWeight: 600 }}>{MODEL_META[detailItem.model].rarity}%</span>
+                <span style={{ color: "#7C5CFC", fontSize: 12, fontWeight: 600 }}>{detailItem.modelRarity ?? "—"}%</span>
                 <p style={{ color: "#EDEFF5", fontSize: 13.5, fontWeight: 600 }}>{detailItem.model}</p>
               </div>
 
               <div className="flex items-center justify-between py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                 <p style={{ color: "#8B93A7", fontSize: 12, fontWeight: 600 }}>Фон</p>
-                <span style={{ color: "#7C5CFC", fontSize: 12, fontWeight: 600 }}>{BACKGROUNDS.find((b) => b.name === detailItem.bg)?.rarity}%</span>
+                <span style={{ color: "#7C5CFC", fontSize: 12, fontWeight: 600 }}>{detailItem.backdropRarity ?? "—"}%</span>
                 <p style={{ color: "#EDEFF5", fontSize: 13.5, fontWeight: 600 }}>{detailItem.bg}</p>
               </div>
 
@@ -1621,13 +1644,18 @@ export default function GiftMarketPrototype() {
                 >
                   {cartIds.includes(detailItem.id) ? <Check size={17} color="#3ECF8E" /> : <ShoppingCart size={17} color="#EDEFF5" />}
                 </button>
-                <button
-                  onClick={() => setBuyConfirmId(detailItem.id)}
-                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl"
-                  style={{ height: 46, background: "linear-gradient(135deg, #7C5CFC, #6247E5)" }}
-                >
-                  <span style={{ color: "#fff", fontSize: 13.5, fontWeight: 600 }}>Купить</span>
-                </button>
+                <div className="flex-1 flex flex-col gap-1.5">
+                  <button
+                    onClick={() => setBuyConfirmId(detailItem.id)}
+                    className="w-full flex items-center justify-center gap-1.5 rounded-xl"
+                    style={{ height: 46, background: "linear-gradient(135deg, #7C5CFC, #6247E5)" }}
+                  >
+                    <span style={{ color: "#fff", fontSize: 13.5, fontWeight: 600 }}>Купить</span>
+                  </button>
+                  <div style={{ textAlign: "center", color: "#fff", fontSize: 12.5, fontWeight: 600 }}>
+                    Цена NFT: {Number(detailItem.price).toFixed(4)} TON
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1654,5 +1682,8 @@ export default function GiftMarketPrototype() {
         )}
       </div>
     </div>
+    </TonConnectUIProvider>
   );
 }
+
+
